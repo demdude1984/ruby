@@ -95,6 +95,11 @@ runs:
 
     - name: compile
       shell: bash
+      env:
+        GITHUB_PR_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        GITHUB_PULL_REQUEST_URL: ${{ github.event.pull_request.html_url }}
+        GITHUB_REF: ${{ github.ref }}
+        GITHUB_HEAD_REF: ${{ github.head_ref }}
       run: >-
         docker run
         --rm
@@ -118,9 +123,9 @@ runs:
         --env LAUNCHABLE_ORGANIZATION='${{ github.repository_owner }}'
         --env LAUNCHABLE_WORKSPACE='${{ github.event.repository.name }}'
         --env LAUNCHABLE_ENABLED='${{ steps.enable-launchable.outputs.enable-launchable || false }}'
-        --env GITHUB_PR_HEAD_SHA='${{ github.event.pull_request.head.sha || github.sha }}'
-        --env GITHUB_PULL_REQUEST_URL='${{ github.event.pull_request.html_url }}'
-        --env GITHUB_REF='${{ github.ref }}'
+        --env GITHUB_PR_HEAD_SHA="${GITHUB_PR_HEAD_SHA}"
+        --env GITHUB_PULL_REQUEST_URL="${GITHUB_PULL_REQUEST_URL}"
+        --env GITHUB_REF="${GITHUB_REF}"
         --env GITHUB_ACTIONS
         --env GITHUB_RUN_ID
         --env GITHUB_REPOSITORY
@@ -128,6 +133,6 @@ runs:
         --env GITHUB_RUN_NUMBER
         --env GITHUB_EVENT_NAME
         --env GITHUB_SHA
-        --env GITHUB_HEAD_REF
+        --env GITHUB_HEAD_REF="${GITHUB_HEAD_REF}"
         --env GITHUB_SERVER_URL
         'ghcr.io/ruby/ruby-ci-image:${{ inputs.tag }}'
