@@ -144,20 +144,28 @@ runs:
 
     - name: Set environment variables for Launchable
       shell: bash
+      env:
+        GITHUB_PULL_REQUEST_URL: ${{ github.event.pull_request.html_url }}
+        LAUNCHABLE_ORGANIZATION: ${{ github.repository_owner }}
+        LAUNCHABLE_WORKSPACE: ${{ github.event.repository.name }}
+        GITHUB_PR_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        LAUNCHABLE_TOKEN: ${{ inputs.launchable-token }}
+        LAUNCHABLE_SKIP_TIMEOUT_RETRY: "1"
+        LAUNCHABLE_COMMIT_TIMEOUT: "1"
       run: |
         : # GITHUB_PULL_REQUEST_URL are used for commenting test reports in Launchable Github App.
         : # https://github.com/launchableinc/cli/blob/v1.80.1/launchable/utils/link.py#L42
-        echo "GITHUB_PULL_REQUEST_URL=${{ github.event.pull_request.html_url }}" >> $GITHUB_ENV
+        echo "GITHUB_PULL_REQUEST_URL=$GITHUB_PULL_REQUEST_URL" >> $GITHUB_ENV
         : # The following envs are necessary in Launchable tokenless authentication.
         : # https://github.com/launchableinc/cli/blob/v1.80.1/launchable/utils/authentication.py#L20
-        echo "LAUNCHABLE_ORGANIZATION=${{ github.repository_owner }}" >> $GITHUB_ENV
-        echo "LAUNCHABLE_WORKSPACE=${{ github.event.repository.name }}" >> $GITHUB_ENV
+        echo "LAUNCHABLE_ORGANIZATION=$LAUNCHABLE_ORGANIZATION" >> $GITHUB_ENV
+        echo "LAUNCHABLE_WORKSPACE=$LAUNCHABLE_WORKSPACE" >> $GITHUB_ENV
         : # https://github.com/launchableinc/cli/blob/v1.80.1/launchable/utils/authentication.py#L71
-        echo "GITHUB_PR_HEAD_SHA=${{ github.event.pull_request.head.sha || github.sha }}" >> $GITHUB_ENV
-        echo "LAUNCHABLE_TOKEN=${{ inputs.launchable-token }}" >> $GITHUB_ENV
+        echo "GITHUB_PR_HEAD_SHA=$GITHUB_PR_HEAD_SHA" >> $GITHUB_ENV
+        echo "LAUNCHABLE_TOKEN=$LAUNCHABLE_TOKEN" >> $GITHUB_ENV
         : # To prevent a slowdown in CI, disable request retries when the Launchable server is unstable.
-        echo "LAUNCHABLE_SKIP_TIMEOUT_RETRY=1" >> $GITHUB_ENV
-        echo "LAUNCHABLE_COMMIT_TIMEOUT=1" >> $GITHUB_ENV
+        echo "LAUNCHABLE_SKIP_TIMEOUT_RETRY=$LAUNCHABLE_SKIP_TIMEOUT_RETRY" >> $GITHUB_ENV
+        echo "LAUNCHABLE_COMMIT_TIMEOUT=$LAUNCHABLE_COMMIT_TIMEOUT" >> $GITHUB_ENV
       if: steps.enable-launchable.outputs.enable-launchable
 
     - name: Set up path
@@ -186,14 +194,6 @@ runs:
         github_ref="${github_ref//\//_}"
         : # With the --name option, we need to configure a unique identifier for this build.
         : # To avoid setting the same build name as the CI which runs on other branches, we use the branch name here.
-        build_name="${github_ref}_${GITHUB_PR_HEAD_SHA}"
-        test_opts="${{ inputs.test-opts }}"
-        test_opts="${test_opts// /}"
-        test_opts="${test_opts//=/:}"
-        test_all_test_suite='test-all'
-        btest_test_suite='btest'
-        test_spec_test_suite='test-spec'
-        if [ "${{ inputs.is-yjit }}" = "true" ]; then
           test_all_test_suite="yjit-${test_all_test_suite}"
           btest_test_suite="yjit-${btest_test_suite}"
           test_spec_test_suite="yjit-${test_spec_test_suite}"
