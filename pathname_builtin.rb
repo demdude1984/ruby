@@ -668,7 +668,11 @@ class Pathname
   #
   def +(other)
     other = Pathname.new(other) unless Pathname === other
-    Pathname.new(plus(@path, other.path))
+    joined = File.expand_path(File.join(@path, other.path))
+    if !joined.start_with?(File.expand_path(@path) + File::SEPARATOR)
+      raise "Invalid path: path traversal detected in #{other.path}"
+    end
+    Pathname.new(joined)
   end
   alias / +
 
@@ -917,13 +921,23 @@ class Pathname    # * File *
   def chmod(mode) File.chmod(mode, @path) end
 
   # See <tt>File.lchmod</tt>.
-  def lchmod(mode) File.lchmod(mode, @path) end
+  def lchmod(mode)
+    if @path.include?("..") || @path.include?("/") || @path.include?("\\")
+      raise "Invalid path: path traversal detected in #{@path}"
+    end
+    File.lchmod(mode, @path)
+  end
 
   # See <tt>File.chown</tt>.  Change owner and group of file.
   def chown(owner, group) File.chown(owner, group, @path) end
 
   # See <tt>File.lchown</tt>.
-  def lchown(owner, group) File.lchown(owner, group, @path) end
+  def lchown(owner, group)
+    if @path.include?("..") || @path.include?("/") || @path.include?("\\")
+      raise "Invalid path: path traversal detected in #{@path}"
+    end
+    File.lchown(owner, group, @path)
+  end
 
   # See <tt>File.fnmatch</tt>.  Return +true+ if the receiver matches the given
   # pattern.
@@ -937,7 +951,12 @@ class Pathname    # * File *
   def ftype() File.ftype(@path) end
 
   # See <tt>File.link</tt>.  Creates a hard link.
-  def make_link(old) File.link(old, @path) end
+  def make_link(old)
+    if @path.include?("..") || @path.include?("/") || @path.include?("\\")
+      raise "Invalid path: path traversal detected in #{@path}"
+    end
+    File.link(old, @path)
+  end
 
   # See <tt>File.open</tt>.  Opens the file for reading or writing.
   def open(...) # :yield: file
@@ -948,7 +967,12 @@ class Pathname    # * File *
   def readlink() self.class.new(File.readlink(@path)) end
 
   # See <tt>File.rename</tt>.  Rename the file.
-  def rename(to) File.rename(@path, to) end
+  def rename(to)
+    if @path.include?("..") || @path.include?("/") || @path.include?("\\")
+      raise "Invalid path: path traversal detected in #{@path}"
+    end
+    File.rename(@path, to)
+  end
 
   # See <tt>File.stat</tt>.  Returns a <tt>File::Stat</tt> object.
   def stat() File.stat(@path) end
@@ -957,10 +981,20 @@ class Pathname    # * File *
   def lstat() File.lstat(@path) end
 
   # See <tt>File.symlink</tt>.  Creates a symbolic link.
-  def make_symlink(old) File.symlink(old, @path) end
+  def make_symlink(old)
+    if @path.include?("..") || @path.include?("/") || @path.include?("\\")
+      raise "Invalid path: path traversal detected in #{@path}"
+    end
+    File.symlink(old, @path)
+  end
 
   # See <tt>File.truncate</tt>.  Truncate the file to +length+ bytes.
-  def truncate(length) File.truncate(@path, length) end
+  def truncate(length)
+    if @path.include?("..") || @path.include?("/") || @path.include?("\\")
+      raise "Invalid path: path traversal detected in #{@path}"
+    end
+    File.truncate(@path, length)
+  end
 
   # See <tt>File.utime</tt>.  Update the access and modification times.
   def utime(atime, mtime) File.utime(atime, mtime, @path) end
@@ -1170,6 +1204,9 @@ module Kernel
   # Creates a Pathname object.
   def Pathname(path) # :doc:
     return path if Pathname === path
+    if path.include?("..") || path.include?("/") || path.include?("\\")
+      raise "Invalid path: path traversal detected in #{path}"
+    end
     Pathname.new(path)
   end
   module_function :Pathname
