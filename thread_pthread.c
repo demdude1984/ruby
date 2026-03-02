@@ -25,6 +25,8 @@
 #elif defined(HAVE_SYS_FCNTL_H)
 #include <sys/fcntl.h>
 #endif
+#include <limits.h>
+#include <errno.h>
 #ifdef HAVE_SYS_PRCTL_H
 #include <sys/prctl.h>
 #endif
@@ -1738,7 +1740,18 @@ ruby_mn_threads_params(void)
     const char *mn_threads_cstr = getenv("RUBY_MN_THREADS");
     bool enable_mn_threads = false;
 
-    if (USE_MN_THREADS && mn_threads_cstr && (enable_mn_threads = atoi(mn_threads_cstr) > 0)) {
+    if (USE_MN_THREADS && mn_threads_cstr) {
+        errno = 0;
+        long mn_threads_val = strtol(mn_threads_cstr, NULL, 10);
+        if ((errno == ERANGE && (mn_threads_val == LONG_MAX || mn_threads_val == LONG_MIN)) ||
+            (errno != 0 && mn_threads_val == 0) ||
+            mn_threads_val > INT_MAX || mn_threads_val < INT_MIN) {
+            enable_mn_threads = false;
+        }
+        else {
+            enable_mn_threads = mn_threads_val > 0;
+        }
+    }
         // enabled
         ruby_mn_threads_enabled = 1;
     }
@@ -1749,7 +1762,17 @@ ruby_mn_threads_params(void)
     int max_cpu = default_max_cpu;
 
     if (USE_MN_THREADS && max_cpu_cstr)  {
-        int given_max_cpu = atoi(max_cpu_cstr);
+        errno = 0;
+        long given_max_cpu_val = strtol(max_cpu_cstr, NULL, 10);
+        int given_max_cpu;
+        if ((errno == ERANGE && (given_max_cpu_val == LONG_MAX || given_max_cpu_val == LONG_MIN)) ||
+            (errno != 0 && given_max_cpu_val == 0) ||
+            given_max_cpu_val > INT_MAX || given_max_cpu_val < INT_MIN) {
+            given_max_cpu = 0;
+        }
+        else {
+            given_max_cpu = (int)given_max_cpu_val;
+        }
         if (given_max_cpu > 0) {
             max_cpu = given_max_cpu;
         }
